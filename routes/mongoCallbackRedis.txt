@@ -1,0 +1,63 @@
+// With a JSON doc
+Person.
+  find({
+    occupation: /host/,
+    'name.last': 'Ghost',
+    age: { $gt: 17, $lt: 66 },
+    likes: { $in: ['vaporizing', 'talking'] }
+  }).
+  limit(10).
+  sort({ occupation: -1 }).
+  select({ name: 1, occupation: 1 }).
+  exec(callback);
+
+// Using query builder
+const query = Person
+  .find({ occupation: /host/ })
+  .where('name.last').equals('Ghost')
+  .where('age').gt(17).lt(66)
+  .where('likes').in(['vaporizing', 'talking'])
+  .limit(10)
+  .sort('-occupation')
+  .select('name occupation')
+  // .exec(callback); // let's leave this off
+
+query.exec((e, res) => console.log(res))
+// this is the same as this:
+query.then(res => console.log(res))
+// which is the same as this:
+const result = await query
+
+// Goal:
+// Check to see if this query has already been fetched in redis
+
+// Possibility: overwrite the .exec function to incorporate our caching logic
+// pseudo-code, does not work
+query.exec = function() {
+  // to check to see if this query has already been executed
+  // and if it has return the result right away
+  const result = client.get('query key')
+  if (result) return result;
+
+  // otherwise issue the query *as normal*
+  const result = runTheOriginalExecFunction()
+  
+  // then save that value in redis
+  client.set('query key', result)
+
+  return result
+}
+
+
+// Customizing Query Keys for Redis
+const query = Person
+  .find({ occupation: /host/ })
+  .where('name.last').equals('Ghost')
+  .where('age').gt(17).lt(66)
+  .where('likes').in(['vaporizing', 'talking'])
+  .limit(10)
+  .sort('-occupation')
+  .select('name occupation')
+
+query.getOptions()
+{ find: { occupation: 'host' }, where: [{ 'name.list': 'Ghost' }] }

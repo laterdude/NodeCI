@@ -9,6 +9,8 @@ passport.serializeUser((user, done) => {
   done(null, user.id);
 });
 
+// id comes from the object property set by the cookieSession function on the req object
+// e.g. {"passport":{"user":"5b193e2411e56a399cee8bbc"}}
 passport.deserializeUser((id, done) => {
   User.findById(id).then(user => {
     done(null, user);

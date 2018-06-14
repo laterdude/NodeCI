@@ -1,5 +1,7 @@
 const mongoose = require('mongoose');
 const requireLogin = require('../middlewares/requireLogin');
+// const { clearHash } = require('../services/cache')
+const cleanCache = require('../middlewares/cleanCache')
 
 const Blog = mongoose.model('Blog');
 
@@ -13,11 +15,37 @@ module.exports = app => {
     res.send(blog);
   });
 
-  app.get('/api/blogs', requireLogin, async (req, res) => {
-    const blogs = await Blog.find({ _user: req.user.id });
+  app.get('/api/blogs', requireLogin, cleanCache, async (req, res) => {
+    const blogs = await Blog
+      .find({ _user: req.user.id })
+      .cache({ key: req.user.id })
 
     res.send(blogs);
   });
+
+  // app.get('/api/blogs', requireLogin, async (req, res) => {
+  //   const redis = require('redis')
+  //   const redisUrl = 'redis://127.0.0.1:6379'
+  //   const client = redis.createClient(redisUrl)
+  //   // node standard libary module that allows us to promisfy callback functions
+  //   const util = require('util') 
+  //   client.get = util.promisify(client.get)
+    
+  //   // Do we have any cached data in redis related to this query?
+  //   const cachedBlogs = await client.get(req.user.id)
+
+  //   // If yes, then respond to the request right away and return
+  //   if (cachedBlogs) {
+  //     console.log('serving from cache')
+  //     return res.send(JSON.parse(cachedBlogs))
+  //   }
+
+  //   // If no, we need to respond to request and update our cache to store the data
+  //   const blogs = await Blog.find({ _user: req.user.id });
+  //   console.log('serving from mongodb')
+  //   res.send(blogs);
+  //   client.set(req.user.id, JSON.stringify(blogs))
+  // });
 
   app.post('/api/blogs', requireLogin, async (req, res) => {
     const { title, content } = req.body;
@@ -34,5 +62,7 @@ module.exports = app => {
     } catch (err) {
       res.send(400, err);
     }
+
+    // clearHash(req.user.id) // turn into middleware
   });
 };
